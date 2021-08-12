@@ -11,13 +11,13 @@ import (
 )
 
 type inputArgs struct {
-	clientIp           string
-	clientPort         int
-	appPort            int
-	audioInput         string
-	audioInputFilePath string
-	audioSineFreq      float64
-	audioOutput        string
+	clientIp            string
+	clientPort          int
+	appPort             int
+	audioInput          string
+	audioInputFilePath  string
+	audioSineFreq       float64
+	audioOutput         string
 	audioOutputFilePath string
 }
 
@@ -34,7 +34,7 @@ func holdOnMsg(router *goczmq.Sock) {
 
 }
 
-func setupArguments () inputArgs {
+func setupArguments() inputArgs {
 	clientIp := flag.String("clientip", "127.0.0.1", "opposite address IP")
 	clientPort := flag.Int("clientport", 5555, "port to connect to")
 	appPort := flag.Int("port", 5555, "port to receive on")
@@ -49,20 +49,20 @@ func setupArguments () inputArgs {
 	flag.Parse()
 
 	arguments := inputArgs{
-		clientIp:           *clientIp,
-		clientPort:         *clientPort,
-		appPort:            *appPort,
-		audioInput:         *audioInput,
-		audioInputFilePath: *audioFilePath,
-		audioSineFreq:      *audioSineFreq,
-		audioOutput:        *audioOutput,
+		clientIp:            *clientIp,
+		clientPort:          *clientPort,
+		appPort:             *appPort,
+		audioInput:          *audioInput,
+		audioInputFilePath:  *audioFilePath,
+		audioSineFreq:       *audioSineFreq,
+		audioOutput:         *audioOutput,
 		audioOutputFilePath: *audioOutputFilePath,
 	}
 	return arguments
 }
 
-func createRouter (appPort *int) *goczmq.Sock {
-	routerString := fmt.Sprintf("tcp://*:%d",*appPort)
+func createRouter(appPort *int) *goczmq.Sock {
+	routerString := fmt.Sprintf("tcp://*:%d", *appPort)
 	router, err := goczmq.NewRouter(routerString)
 	if err != nil {
 		log.Fatal(err)
@@ -75,7 +75,7 @@ func createRouter (appPort *int) *goczmq.Sock {
 	return router
 }
 
-func createDealer (clientIp *string, clientPort *int) *goczmq.Sock {
+func createDealer(clientIp *string, clientPort *int) *goczmq.Sock {
 	dealerEndpoint := fmt.Sprintf("tcp://%s:%d", *clientIp, *clientPort)
 	dealer, err := goczmq.NewDealer(dealerEndpoint)
 	if err != nil {
@@ -87,7 +87,7 @@ func createDealer (clientIp *string, clientPort *int) *goczmq.Sock {
 
 	err = dealer.SendFrame([]byte("You have connected successfully"), 0)
 
-	return  dealer
+	return dealer
 
 }
 
@@ -95,7 +95,6 @@ func main() {
 	arguments := setupArguments()
 
 	var err error
-
 
 	//if *sendAudio == "Yes" {
 	//	router := createRouter(appPort)
@@ -124,7 +123,7 @@ func main() {
 	//inputCallback := generateSineCallback(1e3, 48e3)
 	//inputCallback := generateMp3FileCallback("./meme.mp3")
 
-	stream, err := setupJackDevice(inputCallback)
+	stream, err := setupAudioOutput(inputCallback, arguments)
 	defer stream.Close()
 	err = stream.Start()
 
