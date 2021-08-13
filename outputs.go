@@ -19,17 +19,69 @@ type AudioSenderStream interface {
 type OpusFileWriter struct {
 	encoder              *opus.Encoder
 	file                 *os.File
-	inputPcm, opusBuffer *bytes.Buffer
-	completeWrite        chan bool
-	callback             func([][]float32)
+	opusBuffer, inputPcm *bytes.Buffer
+
+	completeWrite chan bool
+	persistData   chan int
+	killWriter    chan bool
+
+	callback func([][]float32)
 }
 
 func (o OpusFileWriter) Close() error {
-	panic("implement me")
+	o.completeWrite <- true
+	return nil
 }
 
 func (o OpusFileWriter) Start() error {
-	panic("implement me")
+	o.persistData = make(chan int)
+	o.killWriter = make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-o.killWriter:
+				o.file.Close()
+				return
+			case byteNo := <-o.persistData:
+				o.file.Write(o.opusBuffer.Next(byteNo))
+			}
+		}
+	}()
+
+	go func() {
+		a := make([][]float32, 2)
+		for i := range a {
+			a[i] = make([]float32, 512) //make this a switchable buffer thing
+		}
+		poll := time.Tick(time.Second * 512 / 48e3)
+		for {
+			select {
+			case <-o.completeWrite:
+				encodedBytes := make([]byte, 960*4)
+				requiredPadding := (960 * 4) - o.inputPcm.Len()
+				padding := make([]byte, requiredPadding)
+				o.inputPcm.Write(padding)
+				o.encoder.EncodeFloat32(bufferToFloat32Arr(o.inputPcm, 960), encodedBytes)
+				o.persistData <- 960 * 4
+
+				o.killWriter <- true
+				return
+
+			case <-poll:
+				o.callback(a)
+				o.inputPcm.Write(float32Arr2DToByteArr(a))
+
+				if o.inputPcm.Len() > 48e3/100*2*4 { //Hardcoded for 48K, 2 channels and 10ms
+					encodedBytes := make([]byte, 960*4)
+					o.encoder.EncodeFloat32(bufferToFloat32Arr(o.inputPcm, 960), encodedBytes)
+					o.opusBuffer.Write(encodedBytes)
+					o.persistData <- 960 * 4
+				}
+			}
+		}
+	}()
+
+	return nil
 }
 
 func (o OpusFileWriter) Stop() error {
