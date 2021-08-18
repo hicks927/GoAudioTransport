@@ -73,7 +73,12 @@ func (o OpusFileWriter) Start() error {
 
 				if o.inputPcm.Len() > 48e3/100*2*4 { //Hardcoded for 48K, 2 channels and 10ms
 					encodedBytes := make([]byte, 960*4)
-					o.encoder.EncodeFloat32(bufferToFloat32Arr(o.inputPcm, 960), encodedBytes)
+					_, err := o.encoder.EncodeFloat32(bufferToFloat32Arr(o.inputPcm, 960), encodedBytes)
+
+					if err != nil {
+						panic(err)
+					}
+
 					o.opusBuffer.Write(encodedBytes)
 					o.persistData <- 960 * 4
 				}
@@ -113,7 +118,8 @@ func setupFileOutput(callback func([][]float32), filepath string) (AudioSenderSt
 
 func setupOpusOutput(filepath string, callback func(out [][]float32)) (OpusFileWriter, error) {
 	encoder, err := opus.NewEncoder(48e3, 2, opus.AppAudio)
-	file, err := os.OpenFile(filepath, os.O_RDWR, os.ModeExclusive)
+	//file, err := os.OpenFile(filepath, os.O_WRONLY, os.ModeExclusive)
+	file, err := os.Create(filepath)
 	inputPCM := new(bytes.Buffer)
 	opusBuffer := new(bytes.Buffer)
 

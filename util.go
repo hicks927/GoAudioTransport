@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math"
 )
 
 func float32ToByte(f float32) []byte {
@@ -27,7 +28,8 @@ func float32Arr2DToByteArr(f [][]float32) []byte {
 func bufferToFloat32Arr(buf *bytes.Buffer, sliceLength int) []float32 {
 	out := make([]float32, sliceLength)
 	for i := range out {
-		out[i] = float32(binary.LittleEndian.Uint32(buf.Next(4)))
+		temp := binary.LittleEndian.Uint32(buf.Next(4))
+		out[i] = math.Float32frombits(temp)
 	}
 	return out
 }
